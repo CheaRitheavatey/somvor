@@ -1,7 +1,7 @@
 import cv2
 from cvzone.HandTrackingModule import HandDetector
 import numpy as np
-
+import math
 # open camera
 capture = cv2.VideoCapture(0)
 hand_detector = HandDetector(maxHands=1)
@@ -29,8 +29,26 @@ while True:
         white = np.ones((imgSize,imgSize,3),np.uint8 )*255
         
         # put the hand on the white aka map all the size corner of the imgcrop to white aka overlay the hand on the bg white
-        white[0 : imgCrop.shape[0], 0: imgCrop.shape[1]] = imgCrop
+        # white[0 : imgCrop.shape[0], 0: imgCrop.shape[1]] = imgCrop
         
+        ratio = h/w
+        # if ration < 1 -> w > h -> stretch h; else do the oppsite
+        if ratio > 1:
+            x = imgSize/h
+            wCal = math.ceil(x * w) 
+            
+            imgResize = cv2.resize(imgCrop, (wCal, imgSize))
+            gap = math.ceil((imgSize - wCal)/2) # to make the img in the center
+            white[ : , gap: wCal + gap] = imgResize
+
+        else:
+            x = imgSize/w
+            hCal = math.ceil(x * h) 
+            
+            imgResize = cv2.resize(imgCrop, (imgSize, hCal))
+            gap = math.ceil((imgSize - hCal)/2) # to make the img in the center
+            white[gap: hCal + gap , :  ] = imgResize
+
         cv2.imshow("imgCrop", imgCrop)
         cv2.imshow("imgwhite", white)
         
