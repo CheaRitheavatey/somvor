@@ -11,7 +11,7 @@ hand_detector = HandDetector(maxHands=1)
 space = 20
 imgSize = 300
 
-folder = "img/No"
+folder = "img/I_Love_You"
 count = 0
 
 while True:
