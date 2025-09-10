@@ -3,6 +3,7 @@ from cvzone.HandTrackingModule import HandDetector
 import numpy as np
 import math
 import time
+import os
 
 # open camera
 capture = cv2.VideoCapture(0)
@@ -11,7 +12,9 @@ hand_detector = HandDetector(maxHands=1)
 space = 20
 imgSize = 300
 
-folder = "img/I_Love_You"
+folder = "img/Find"
+if not os.path.exists(folder):
+    os.makedirs(folder)
 count = 0
 
 while True:
@@ -58,7 +61,7 @@ while True:
         cv2.imshow("imgwhite", white)
         
     cv2.imshow("img", img)
-    key = cv2.waitKey(1)
+    key = cv2.waitKey(1) & 0xFF
     
     if key == ord("s"):
         count+= 1
