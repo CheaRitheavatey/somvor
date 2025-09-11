@@ -12,7 +12,7 @@ hand_detector = HandDetector(maxHands=1)
 space = 20
 imgSize = 300
 
-folder = "img/Find"
+folder = "img/See_You_Later"
 if not os.path.exists(folder):
     os.makedirs(folder)
 count = 0
