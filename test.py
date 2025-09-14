@@ -4,19 +4,44 @@ import numpy as np
 import math
 import time
 import os
-import tensorflow
 
 from cvzone.ClassificationModule import Classifier
-classifer = Classifier("model/keras_model.h5", "model/labels.txt")
+classifer = Classifier("modelss/keras_model.h5", "modelss/labels.txt")
 
 # for the index below need to put the labels in arr here
-labels = []
-with open("model/labels.txt", "r") as file:
-    for i in file:
-        # split by space
-        word = i.strip().split(maxsplit=1)
-        if len(word) > 1:
-            labels.append(word[1])
+labels = [
+"Again",
+"Bathroom",
+"Eat",
+"Find",
+"Fine",
+"Good",
+"Hello",
+"I_Love_You",
+"Like",
+"Me",
+"Milk",
+"No",
+"Please",
+"See_You_Later",
+"Sleep",
+"Talk",
+"Thank_You",
+"Understand",
+"Want",
+"What's_Up",
+"Who",
+"Why",
+"Yes",
+"You"
+
+]
+# with open("model/labels.txt", "r") as file:
+#     for i in file:
+#         # split by space
+#         word = i.strip().split(maxsplit=1)
+#         if len(word) > 1:
+#             labels.append(word[1])
 # open camera
 capture = cv2.VideoCapture(0)
 hand_detector = HandDetector(maxHands=1)
