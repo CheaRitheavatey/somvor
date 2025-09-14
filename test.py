@@ -1,14 +1,31 @@
 import cv2
 from cvzone.HandTrackingModule import HandDetector
+from cvzone.ClassificationModule import Classifier
+
 import numpy as np
 import math
 import time
 import os
 
-from cvzone.ClassificationModule import Classifier
-classifer = Classifier("modelss/keras_model.h5", "modelss/labels.txt")
+    
+# from tensorflow.keras.models import load_model
+# model = load_model("modelss/keras_model.h5")
+# model.save("keras_model_tf29.h5", save_format="h5")
 
-# for the index below need to put the labels in arr here
+# open camera
+capture = cv2.VideoCapture(0)
+hand_detector = HandDetector(maxHands=1)
+
+classifier = Classifier("modelss/keras_model.h5", "modelss/labels.txt")
+
+space = 20
+imgSize = 300
+
+# folder = "img/See_You_Later"
+# if not os.path.exists(folder):
+#     os.makedirs(folder)
+# count = 0
+
 labels = [
 "Again",
 "Bathroom",
@@ -36,23 +53,6 @@ labels = [
 "You"
 
 ]
-# with open("model/labels.txt", "r") as file:
-#     for i in file:
-#         # split by space
-#         word = i.strip().split(maxsplit=1)
-#         if len(word) > 1:
-#             labels.append(word[1])
-# open camera
-capture = cv2.VideoCapture(0)
-hand_detector = HandDetector(maxHands=1)
-
-space = 20
-imgSize = 300
-
-# folder = "img/See_You_Later"
-# if not os.path.exists(folder):
-#     os.makedirs(folder)
-# count = 0
 
 while True:
     success, img = capture.read()
@@ -86,9 +86,6 @@ while True:
             gap = math.ceil((imgSize - wCal)/2) # to make the img in the center
             white[ : , gap: wCal + gap] = imgResize
             
-            # now add classifier to predict it
-            prediction, index = classifer.getPrediction(img)
-            print(prediction, index)
 
         else:
             x = imgSize/w
@@ -97,6 +94,8 @@ while True:
             imgResize = cv2.resize(imgCrop, (imgSize, hCal))
             gap = math.ceil((imgSize - hCal)/2) # to make the img in the center
             white[gap: hCal + gap , :  ] = imgResize
+        prediction, index = classifier.getPrediction(white)
+        print(prediction, index)
 
         cv2.imshow("imgCrop", imgCrop)
         cv2.imshow("imgwhite", white)
@@ -110,3 +109,4 @@ while True:
     #     print(count)
     # elif key == ord("q"):
     #     break
+
