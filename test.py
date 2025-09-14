@@ -4,6 +4,7 @@ import numpy as np
 import math
 import time
 import os
+import tensorflow
 
 from cvzone.ClassificationModule import Classifier
 classifer = Classifier("model/keras_model.h5", "model/labels.txt")
