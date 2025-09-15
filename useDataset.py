@@ -55,6 +55,11 @@ le = LabelEncoder()
 train_labels_enc = le.fit_transform(train_labels)
 val_labels_enc = le.transform(val_labels)
 
+print("Train labels:", train_labels)
+print("Encoded train labels:", train_labels_enc)
+print("Number of training samples:", len(train_labels))
+
+
 # One-hot encoding
 train_labels_cat = to_categorical(train_labels_enc)
 val_labels_cat = to_categorical(val_labels_enc)
