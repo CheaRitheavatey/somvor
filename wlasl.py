@@ -20,7 +20,7 @@ for item in meta:
             filtered.append({
                 "gloss": item["gloss"],
                 "video_id": inst.get("video_id", inst.get("youtube_id")),
-                "url": inst["url"],                      # ✅ now inside instance
+                "url": inst["url"],
                 "start_frame": inst.get("frame_start", 0),
                 "end_frame": inst.get("frame_end", None)
             })
@@ -44,3 +44,6 @@ for item in tqdm(filtered):
     # yt-dlp command
     cmd = ["yt-dlp", "-f", "mp4", "-o", str(outpath), url]
     subprocess.run(cmd)   # add error handling / retries in production
+
+
+# labeling 
