@@ -11,13 +11,19 @@ from tensorflow.keras.models import load_model
 # CONFIG
 SEQ_LEN = 48
 SESSION_MAX_AGE = 60  # seconds, cleanup idle sessions
-ALLOWED_ORIGINS = ["http://localhost:5173", "http://127.0.0.1:5173"]  # Vite dev server
+ALLOWED_ORIGINS = [
+    "http://localhost:5173", 
+    "http://127.0.0.1:5173",
+    ]  # Vite dev server
 
 # app + CORS
 app = FastAPI()
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=ALLOWED_ORIGINS + ["*"],  # allow * for quick local testing; remove in prod
+    allow_origins=[
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -80,11 +86,12 @@ async def predict(file: UploadFile = File(...), x_client_id: str = Header(None))
         sess["deque"].append(lm)
         sess["last"] = time.time()
         have = len(sess["deque"])
+        
 
-    # If we don't yet have SEQ_LEN frames, return status to frontend
     if have < SEQ_LEN:
-        return {"word": None, "confidence": 0.0, "status": "collecting", "have": have}
-
+        print(f"[DEBUG] Collecting frames ({have}/{SEQ_LEN}) from {x_client_id}")
+    else:
+        print(f"[DEBUG] Ready to predict for {x_client_id} (frames={have})")
     # Build input batch and predict
     with buffers_lock:
         seq = np.array(sess["deque"], dtype=np.float32)  # shape (SEQ_LEN, FEATURE_DIM)
@@ -105,5 +112,6 @@ def cleanup_loop():
             to_delete = [k for k,v in session_buffers.items() if now - v["last"] > SESSION_MAX_AGE]
             for k in to_delete:
                 del session_buffers[k]
+
 
 threading.Thread(target=cleanup_loop, daemon=True).start()
