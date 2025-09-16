@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign Language Detection</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Roboto', sans-serif;
+            background: linear-gradient(135deg, #1a2a6c, #b21f1f, #fdbb2d);
+            color: #fff;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .subtitle {
+            font-size: 1.2rem;
+            opacity: 0.9;
+        }
+
+        .main-content {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        .camera-section {
+            flex: 1;
+            min-width: 300px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 20px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+        }
+
+        .video-container {
+            position: relative;
+            width: 100%;
+            height: 0;
+            padding-bottom: 75%;
+            background: #000;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-bottom: 20px;
+        }
+
+        #video {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        button {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 50px;
+            background: #4a90e2;
+            color: white;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            flex: 1;
+            min-width: 120px;
+        }
+
+        button:hover {
+            background: #357ae8;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        button#start {
+            background: #34a853;
+        }
+
+        button#start:hover {
+            background: #2e8b47;
+        }
+
+        button#stop {
+            background: #ea4335;
+        }
+
+        button#stop:hover {
+            background: #d33426;
+        }
+
+        .results-section {
+            flex: 1;
+            min-width: 300px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 20px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+        }
+
+        .results-title {
+            font-size: 1.5rem;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .detection-result {
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .detection-text {
+            font-size: 1.8rem;
+            text-align: center;
+            margin-bottom: 10px;
+            min-height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .confidence {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .confidence-bar {
+            flex: 1;
+            height: 10px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 5px;
+            overflow: hidden;
+            margin: 0 10px;
+        }
+
+        .confidence-fill {
+            height: 100%;
+            background: #4a90e2;
+            border-radius: 5px;
+            width: 0%;
+            transition: width 0.5s ease;
+        }
+
+        .language-options {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .language-btn {
+            flex: 1;
+            padding: 10px;
+            text-align: center;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .language-btn.active {
+            background: #4a90e2;
+            box-shadow: 0 0 15px rgba(74, 144, 226, 0.5);
+        }
+
+        .translation {
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 10px;
+            padding: 20px;
+        }
+
+        .translation-text {
+            font-size: 1.8rem;
+            text-align: center;
+            margin-bottom: 10px;
+            min-height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .subtitle-container {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 20px;
+            text-align: center;
+            z-index: 100;
+        }
+
+        .subtitle {
+            font-size: 2rem;
+            color: white;
+            text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+        }
+
+        .instructions {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 20px;
+            margin-top: 20px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+        }
+
+        .instructions h2 {
+            margin-bottom: 15px;
+        }
+
+        .instructions ol {
+            padding-left: 20px;
+            line-height: 1.6;
+        }
+
+        .instructions li {
+            margin-bottom: 10px;
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                flex-direction: column;
+            }
+
+            h1 {
+                font-size: 2rem;
+            }
+
+            .detection-text,
+            .translation-text {
+                font-size: 1.5rem;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <header>
+            <h1>Sign Language Detection</h1>
+            <p class="subtitle">Real-time sign language detection with Khmer translation</p>
+        </header>
+
+        <div class="main-content">
+            <div class="camera-section">
+                <h2>Camera Input</h2>
+                <div class="video-container">
+                    <video id="video" autoplay playsinline></video>
+                </div>
+
+                <div class="controls">
+                    <button id="start">Start Detection</button>
+                    <button id="stop">Stop Detection</button>
+                </div>
+
+                <div class="language-options">
+                    <div class="language-btn active" data-lang="en">English</div>
+                    <div class="language-btn" data-lang="km">Khmer</div>
+                </div>
+            </div>
+
+            <div class="results-section">
+                <h2 class="results-title">Detection Results</h2>
+
+                <div class="detection-result">
+                    <div class="detection-text">Hello</div>
+                    <div class="confidence">
+                        <span>Confidence:</span>
+                        <div class="confidence-bar">
+                            <div class="confidence-fill" style="width: 85%"></div>
+                        </div>
+                        <span>85%</span>
+                    </div>
+                </div>
+
+                <div class="translation">
+                    <h3>Translation</h3>
+                    <div class="translation-text">សួស្តី</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- <div class="instructions">
+            <h2>How to Use</h2>
+            <ol>
+                <li>Allow camera access when prompted</li>
+                <li>Click "Start Detection" to begin sign language recognition</li>
+                <li>Perform signs in front of your camera</li>
+                <li>Detected text will appear with confidence level</li>
+                <li>Switch to Khmer translation using the language options</li>
+                <li>Subtitles will appear at the bottom of the screen</li>
+            </ol>
+        </div> -->
+    </div>
+
+    <div class="subtitle-container">
+        <div class="subtitle">Hello | សួស្តី</div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const video = document.getElementById('video');
+            const startBtn = document.getElementById('start');
+            const stopBtn = document.getElementById('stop');
+            const detectionText = document.querySelector('.detection-text');
+            const translationText = document.querySelector('.translation-text');
+            const confidenceFill = document.querySelector('.confidence-fill');
+            const confidencePercent = document.querySelector('.confidence span:last-child');
+            const subtitle = document.querySelector('.subtitle');
+            const languageBtns = document.querySelectorAll('.language-btn');
+
+            let currentLanguage = 'en';
+            let isDetecting = false;
+            let detectionInterval;
+
+            // Sample data for demonstration
+            const signs = ["Again",
+            "Bathroom",
+                "Eat",
+                "Find",
+                "Fine",
+                "Good",
+                "Hello",
+                "I_Love_You",
+                "Like",
+                "Me",
+                "Milk",
+                "No",
+                "Please",
+                "See_You_Later",
+                "Sleep",
+                "Talk",
+                "Thank_You",
+                "Understand",
+                "Want",
+                "What's_Up",
+                "Who",
+                "Why",
+                "Yes",
+                "You"]
+
+            const khmerTranslations = {
+                "Again": "សួស្តី",
+                "Bathroom": "បន្ទប់ទឹក",
+                "Eat",
+                "Find",
+                "Fine",
+                "Good",
+                "Hello",
+                "I_Love_You",
+                "Like",
+                "Me",
+                "Milk",
+                "No",
+                "Please",
+                "See_You_Later",
+                "Sleep",
+                "Talk",
+                "Thank_You",
+                "Understand",
+                "Want",
+                "What's_Up",
+                "Who",
+                "Why",
+                "Yes",
+                "You"
+
+            };
+
+            // Initialize camera
+            async function initCamera() {
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({
+                        video: { width: 1280, height: 720 }
+                    });
+                    video.srcObject = stream;
+                } catch (err) {
+                    console.error('Error accessing camera:', err);
+                    alert('Unable to access camera. Please check permissions.');
+                }
+            }
+
+            // Start detection
+            function startDetection() {
+                if (isDetecting) return;
+
+                isDetecting = true;
+                startBtn.textContent = 'Detecting...';
+                startBtn.disabled = true;
+
+                // Simulate detection (replace with your actual model integration)
+                let index = 0;
+                detectionInterval = setInterval(() => {
+                    const randomSign = signs[Math.floor(Math.random() * signs.length)];
+                    const confidence = Math.floor(Math.random() * 30) + 70; // 70-100%
+
+                    detectionText.textContent = randomSign;
+                    confidenceFill.style.width = `${confidence}%`;
+                    confidencePercent.textContent = `${confidence}%`;
+
+                    updateTranslation(randomSign);
+                }, 2000);
+            }
+
+            // Stop detection
+            function stopDetection() {
+                if (!isDetecting) return;
+
+                isDetecting = false;
+                clearInterval(detectionInterval);
+                startBtn.textContent = 'Start Detection';
+                startBtn.disabled = false;
+
+                detectionText.textContent = '';
+                translationText.textContent = '';
+                confidenceFill.style.width = '0%';
+                confidencePercent.textContent = '0%';
+                subtitle.textContent = '';
+            }
+
+            // Update translation based on current language
+            function updateTranslation(sign) {
+                if (currentLanguage === 'km') {
+                    translationText.textContent = khmerTranslations[sign] || sign;
+                    subtitle.textContent = `${sign} | ${khmerTranslations[sign] || sign}`;
+                } else {
+                    translationText.textContent = sign;
+                    subtitle.textContent = sign;
+                }
+            }
+
+            // Switch language
+            function switchLanguage(lang) {
+                currentLanguage = lang;
+
+                // Update UI
+                languageBtns.forEach(btn => {
+                    if (btn.dataset.lang === lang) {
+                        btn.classList.add('active');
+                    } else {
+                        btn.classList.remove('active');
+                    }
+                });
+
+                // Update translation if there's current text
+                if (detectionText.textContent) {
+                    updateTranslation(detectionText.textContent);
+                }
+            }
+
+            // Event listeners
+            startBtn.addEventListener('click', startDetection);
+            stopBtn.addEventListener('click', stopDetection);
+
+            languageBtns.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    switchLanguage(btn.dataset.lang);
+                });
+            });
+
+            // Initialize the app
+            initCamera();
+        });
+    </script>
+</body>
+
+</html>
