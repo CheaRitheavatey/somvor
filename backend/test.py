@@ -110,6 +110,10 @@
 #     # elif key == ord("q"):
 #     #     break
 
+
+
+# test with keras_model.h5
+
 import cv2, numpy as np
 import mediapipe as mp
 from tensorflow.keras.models import load_model

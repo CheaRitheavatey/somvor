@@ -24,7 +24,7 @@ app.add_middleware(
 )
 
 # load model + labels
-model = load_model("sign_model.h5")          # path to your trained model
+model = load_model("sign_model.h5")
 labels = np.load("landmarks/labels.npy")     # adjust path if needed
 FEATURE_DIM = None  # set after first landmark extraction
 
