@@ -14,16 +14,39 @@ SESSION_MAX_AGE = 60  # seconds, cleanup idle sessions
 ALLOWED_ORIGINS = [
     "http://localhost:5173", 
     "http://127.0.0.1:5173",
-    ]  # Vite dev server
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    ]  # React dev server
+
+# Khmer translations for your labels
+khmer_translations = {
+    "hello": "សួស្តី",
+    "thanks": "អរគុណ",
+    "yes": "បាទ",
+    "no": "ទេ",
+    "please": "សូម",
+    "sorry": "សុំទោស",
+    "help": "ជួយ",
+    "water": "ទឹក",
+    "food": "ម្ហូប",
+    "home": "ផ្ទះ",
+    "school": "សាលា",
+    "work": "ការងារ",
+    "friend": "មិត្តភក្តិ",
+    "family": "គ្រួសារ",
+    "love": "ស្រលាញ់",
+    "happy": "សប្បាយ",
+    "sad": "ទូលាយ",
+    "tired": "ហត់",
+    "sick": "ឈឺ",
+    "goodbye": "លាហើយ"
+}
 
 # app + CORS
 app = FastAPI()
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
-    ],
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -59,7 +82,7 @@ def extract_hand_landmarks_from_bgr(img_bgr):
 async def predict(file: UploadFile = File(...), x_client_id: str = Header(None)):
     """
     Accepts a single image/frame. Header 'X-Client-Id' must be provided by the client to maintain per-client buffer.
-    Returns JSON: {word, confidence, status, have}
+    Returns JSON: {word, confidence, status, have, khmer_translation}
     """
     if not x_client_id:
         return {"error": "Missing X-Client-Id header (unique client id)"}
@@ -72,7 +95,7 @@ async def predict(file: UploadFile = File(...), x_client_id: str = Header(None))
 
     lm = extract_hand_landmarks_from_bgr(img)
     if lm is None:
-        return {"word": None, "confidence": 0.0, "status": "no_hand", "have": 0}
+        return {"word": None, "confidence": 0.0, "status": "no_hand", "have": 0, "khmer_translation": ""}
 
     global FEATURE_DIM
     if FEATURE_DIM is None:
@@ -90,8 +113,10 @@ async def predict(file: UploadFile = File(...), x_client_id: str = Header(None))
 
     if have < SEQ_LEN:
         print(f"[DEBUG] Collecting frames ({have}/{SEQ_LEN}) from {x_client_id}")
+        return {"word": None, "confidence": 0.0, "status": "collecting", "have": have, "khmer_translation": ""}
     else:
         print(f"[DEBUG] Ready to predict for {x_client_id} (frames={have})")
+    
     # Build input batch and predict
     with buffers_lock:
         seq = np.array(sess["deque"], dtype=np.float32)  # shape (SEQ_LEN, FEATURE_DIM)
@@ -100,8 +125,21 @@ async def predict(file: UploadFile = File(...), x_client_id: str = Header(None))
     idx = int(np.argmax(preds))
     label = str(labels[idx])
     conf = float(preds[idx])
+    
+    # Get Khmer translation
+    khmer_word = khmer_translations.get(label, "Translation not available")
 
-    return {"word": label, "confidence": conf, "status": "predicted", "have": have}
+    return {"word": label, "confidence": conf, "status": "predicted", "have": have, "khmer_translation": khmer_word}
+
+@app.get(f"/reset/{client_id}")
+async def reset_client(client_id: str):
+    """Reset the buffer for a specific client"""
+    with buffers_lock:
+        if client_id in session_buffers:
+            session_buffers[client_id]["deque"].clear()
+            return {"message": f"Buffer reset for client {client_id}"}
+        else:
+            return {"message": f"No buffer found for client {client_id}"}
 
 # Background cleanup thread to remove idle sessions
 def cleanup_loop():
@@ -112,6 +150,10 @@ def cleanup_loop():
             to_delete = [k for k,v in session_buffers.items() if now - v["last"] > SESSION_MAX_AGE]
             for k in to_delete:
                 del session_buffers[k]
-
+                print(f"Cleaned up session for client {k}")
 
 threading.Thread(target=cleanup_loop, daemon=True).start()
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)
