@@ -4,7 +4,7 @@ from tensorflow.keras.layers import LSTM, Dense, Dropout
 from tensorflow.keras.callbacks import ModelCheckpoint
 from sklearn.model_selection import train_test_split
 
-# Load dataset
+# ---- Load dataset ----
 X = np.load("landmarks/X.npy")
 y = np.load("landmarks/y.npy")
 labels = np.load("landmarks/labels.npy")

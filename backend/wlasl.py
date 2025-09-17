@@ -55,7 +55,7 @@ print(f"Found {len(filtered)} clips for your selected glosses")
 # extract landmarks
 VIDEO_ROOT = Path("videos") 
 OUTPUT_ROOT = Path("landmarks")
-MAX_FRAMES = 48
+MAX_FRAMES = 30
 OUTPUT_ROOT.mkdir(exist_ok=True)
 
 # Setup mediapipe
