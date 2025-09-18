@@ -2,7 +2,7 @@
   "name": "frontend",
   "private": true,
   "version": "0.0.0",
-  "homepage": "https://CheaRitheavatey.github.io/somvor",
+  "homepage": "https://CheaRitheavatey.github.io/somvor/frontend",
   "type": "module",
   "scripts": {
     "dev": "vite",
