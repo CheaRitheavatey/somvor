@@ -5,6 +5,7 @@ import math
 import time
 import os
 
+
 # open camera
 capture = cv2.VideoCapture(0)
 hand_detector = HandDetector(maxHands=1)
@@ -12,7 +13,7 @@ hand_detector = HandDetector(maxHands=1)
 space = 20
 imgSize = 300
 
-folder = "img/See_You_Later"
+folder = "img/I_Love_You"
 if not os.path.exists(folder):
     os.makedirs(folder)
 count = 0

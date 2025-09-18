@@ -27,3 +27,33 @@ labels = [
 "You"
 
 ]
+
+model = load_model("keras_model_tf29.h5")
+
+labels = [
+"again",
+"bad",
+"drink",
+"eat",
+"good",
+"hello",
+"help",
+"like",
+"me",
+"milk",
+"no",
+"please",
+"see",
+"sleep",
+"thank you",
+"understand",
+"want",
+"what",
+"when",
+"where",
+"who",
+"why",
+"yes",
+"you"
+
+]

@@ -1,87 +1,218 @@
-import React, { useState } from "react";
-import api from "./api";  
+import React, { useRef, useState, useEffect } from 'react';
+import * as handPoseDetection from '@tensorflow-models/hand-pose-detection';
+import '@tensorflow/tfjs-core';
+import '@tensorflow/tfjs-backend-webgl';
 
-export default function App() {
-  const [sequence, setSequence] = useState(""); // raw text input
-  const [result, setResult] = useState(null);
-  const [loading, setLoading] = useState(false);
+function App() {
+  const videoRef = useRef(null);
+  const canvasRef = useRef(null);
+  const [detector, setDetector] = useState(null);
+  const [isWebcamStarted, setIsWebcamStarted] = useState(false);
+  const [gestureResult, setGestureResult] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [modelInfo, setModelInfo] = useState(null);
+  const [sequence, setSequence] = useState([]);
 
-  const handlePredict = async () => {
+  // Initialize hand detector and get model info
+  useEffect(() => {
+    const initialize = async () => {
+      setIsLoading(true);
+      
+      try {
+        // Get model info from backend
+        const response = await fetch('http://localhost:8000/info');
+        if (response.ok) {
+          const info = await response.json();
+          setModelInfo(info);
+          console.log("Model info:", info);
+        }
+        
+        // Initialize hand detector
+        const model = handPoseDetection.SupportedModels.MediaPipeHands;
+        const detectorConfig = {
+          runtime: 'tfjs',
+          modelType: 'full'
+        };
+        const detectorInstance = await handPoseDetection.createDetector(model, detectorConfig);
+        setDetector(detectorInstance);
+      } catch (error) {
+        console.error('Initialization error:', error);
+      }
+      
+      setIsLoading(false);
+    };
+
+    initialize();
+  }, []);
+
+  // Start webcam
+  const startWebcam = async () => {
     try {
-      setLoading(true);
-      // Parse the text area into a 2D array
-      const parsed = JSON.parse(sequence);
-      const res = await api.post("/predict", { sequence: parsed });
-      setResult(res.data);
-    } catch (err) {
-      console.error(err);
-      setResult({ error: "Invalid input or server error" });
-    } finally {
-      setLoading(false);
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        video: { width: 640, height: 480 } 
+      });
+      videoRef.current.srcObject = stream;
+      setIsWebcamStarted(true);
+      
+      // Start detection loop once video is playing
+      videoRef.current.onplaying = () => {
+        detectGestures();
+      };
+    } catch (error) {
+      console.error('Error accessing webcam:', error);
+    }
+  };
+
+  // Process hand landmarks to create feature vector
+  const processLandmarks = (keypoints) => {
+    // Convert keypoints to a flat array of coordinates
+    const features = [];
+    
+    for (const keypoint of keypoints) {
+      features.push(keypoint.x);
+      features.push(keypoint.y);
+      features.push(keypoint.z || 0);
+    }
+    
+    return features;
+  };
+
+  // Detect gestures and send to backend
+  const detectGestures = async () => {
+    if (!detector || !isWebcamStarted || !modelInfo) return;
+
+    const context = canvasRef.current.getContext('2d');
+    context.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
+
+    // Estimate hands
+    const hands = await detector.estimateHands(videoRef.current);
+    
+    // Draw hand landmarks
+    if (hands.length > 0) {
+      drawHands(hands, context);
+      
+      // Process landmarks to create feature vector
+      const features = processLandmarks(hands[0].keypoints);
+      
+      // Add to sequence
+      setSequence(prev => {
+        const newSequence = [...prev, features];
+        
+        // Keep only the required sequence length
+        if (newSequence.length > modelInfo.seq_len) {
+          return newSequence.slice(-modelInfo.seq_len);
+        }
+        return newSequence;
+      });
+    }
+
+    // Continue detection
+    requestAnimationFrame(detectGestures);
+  };
+
+  // Send sequence to backend for prediction
+  useEffect(() => {
+    const sendSequenceForPrediction = async () => {
+      if (sequence.length === modelInfo.seq_len) {
+        try {
+          const response = await fetch('http://localhost:8000/predict_sequence', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ sequence }),
+          });
+          
+          if (response.ok) {
+            const result = await response.json();
+            setGestureResult(`${result.prediction} (${(result.confidence * 100).toFixed(1)}% confidence)`);
+          }
+        } catch (error) {
+          console.error('Error sending data to backend:', error);
+        }
+      }
+    };
+
+    if (modelInfo && sequence.length === modelInfo.seq_len) {
+      sendSequenceForPrediction();
+    }
+  }, [sequence, modelInfo]);
+
+  // Draw hand landmarks on canvas
+  const drawHands = (hands, context) => {
+    context.strokeStyle = 'red';
+    context.fillStyle = 'red';
+    
+    for (const hand of hands) {
+      for (const keypoint of hand.keypoints) {
+        context.beginPath();
+        context.arc(keypoint.x, keypoint.y, 5, 0, 2 * Math.PI);
+        context.fill();
+      }
+      
+      // Draw connections between keypoints
+      const connections = handPoseDetection.util.keypointsConnections;
+      for (const connection of connections) {
+        const [start, end] = connection;
+        context.beginPath();
+        context.moveTo(hand.keypoints[start].x, hand.keypoints[start].y);
+        context.lineTo(hand.keypoints[end].x, hand.keypoints[end].y);
+        context.stroke();
+      }
     }
   };
 
   return (
-    <div style={styles.container}>
-      <h1>ASL Sign Prediction</h1>
-      <p>Paste a landmark array (e.g. [[x1,y1,...],[x2,y2,...],...])</p>
-      <textarea
-        style={styles.textarea}
-        rows={8}
-        placeholder='Example: [[0.1,0.2,...],[0.3,0.4,...]]'
-        value={sequence}
-        onChange={(e) => setSequence(e.target.value)}
-      />
-      <button style={styles.button} onClick={handlePredict} disabled={loading}>
-        {loading ? "Predicting..." : "Send to Model"}
-      </button>
-
-      {result && (
-        <div style={styles.resultBox}>
-          {result.error ? (
-            <p style={{ color: "red" }}>{result.error}</p>
-          ) : (
-            <>
-              <h3>Prediction: {result.prediction}</h3>
-              <p>Confidence: {(result.confidence * 100).toFixed(2)}%</p>
-            </>
-          )}
+    <div className="app">
+      <h1>Hand Gesture Recognition</h1>
+      
+      <div className="controls">
+        <button 
+          onClick={startWebcam} 
+          disabled={isWebcamStarted || isLoading || !modelInfo}
+        >
+          {isLoading ? 'Loading Model...' : 'Start Webcam'}
+        </button>
+      </div>
+      
+      <div className="camera-container">
+        <video 
+          ref={videoRef} 
+          autoPlay 
+          playsInline 
+          width="640" 
+          height="480" 
+          style={{ display: isWebcamStarted ? 'block' : 'none' }}
+        />
+        <canvas 
+          ref={canvasRef} 
+          width="640" 
+          height="480" 
+          style={{ position: 'absolute', left: 0, top: 0 }}
+        />
+      </div>
+      
+      {modelInfo && (
+        <div className="model-info">
+          <p>Model expects: {modelInfo.seq_len} frames with {modelInfo.feature_dim} features each</p>
+          <p>Sequence progress: {sequence.length}/{modelInfo.seq_len}</p>
+        </div>
+      )}
+      
+      {gestureResult && (
+        <div className="result">
+          <h2>Detected Gesture: {gestureResult}</h2>
+        </div>
+      )}
+      
+      {!isWebcamStarted && (
+        <div className="instructions">
+          <p>Click "Start Webcam" to begin gesture recognition</p>
+          <p>Make sure your FastAPI backend is running on port 8000</p>
         </div>
       )}
     </div>
   );
 }
 
-const styles = {
-  container: {
-    maxWidth: 600,
-    margin: "40px auto",
-    padding: 20,
-    fontFamily: "sans-serif",
-    textAlign: "center",
-    border: "1px solid #ddd",
-    borderRadius: 8,
-  },
-  textarea: {
-    width: "100%",
-    padding: 10,
-    marginBottom: 20,
-    fontFamily: "monospace",
-  },
-  button: {
-    padding: "10px 20px",
-    fontSize: 16,
-    cursor: "pointer",
-    backgroundColor: "#4CAF50",
-    color: "#fff",
-    border: "none",
-    borderRadius: 4,
-  },
-  resultBox: {
-    marginTop: 20,
-    padding: 10,
-    border: "1px solid #ccc",
-    borderRadius: 4,
-    background: "#f9f9f9",
-  },
-};
+export default App;
